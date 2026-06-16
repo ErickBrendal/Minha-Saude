@@ -69,32 +69,18 @@ export default function LoginForm() {
     >
       <div style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div
+          <img
+            src="/logo.svg"
+            alt="Minha Saúde"
+            width={84}
+            height={84}
             style={{
-              width: 76,
-              height: 76,
-              borderRadius: 24,
-              background: C.brand,
               margin: "0 auto 18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: "block",
+              borderRadius: 24,
               boxShadow: "0 12px 32px rgba(14,124,123,.35)",
             }}
-          >
-            <svg
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#fff"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 12 h4 l2 -5 l3 9 l2 -4 h7" />
-            </svg>
-          </div>
+          />
           <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 4px", letterSpacing: -0.6 }}>
             Minha Saúde
           </h1>

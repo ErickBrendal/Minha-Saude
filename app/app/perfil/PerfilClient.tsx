@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Stethoscope, Pill, ShieldCheck, LogOut, ChevronRight } from "lucide-react";
+import { Stethoscope, Pill, ShieldCheck, LogOut, ChevronRight, Download } from "lucide-react";
 import { Card, Spinner } from "@/components/ui";
 import { C, NUM } from "@/lib/design";
 import { createClient } from "@/lib/supabase-browser";
@@ -150,6 +150,8 @@ export default function PerfilClient({
         </div>
       </Card>
 
+      <InstallButton />
+
       <button
         onClick={logout}
         style={{
@@ -210,5 +212,89 @@ function NavRow({ href, icon: Icon, label }: { href: string; icon: any; label: s
         <ChevronRight size={18} color={C.text2} />
       </Card>
     </Link>
+  );
+}
+
+// Botão de instalação do app — aparece só se ainda não instalado
+function InstallButton() {
+  const [deferred, setDeferred] = useState<any>(null);
+  const [isIOS, setIsIOS] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const [showIosHint, setShowIosHint] = useState(false);
+
+  useEffect(() => {
+    const standalone =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    if (standalone) {
+      setInstalled(true);
+      return;
+    }
+    setIsIOS(/iphone|ipad|ipod/i.test(navigator.userAgent));
+    const handler = (e: any) => {
+      e.preventDefault();
+      setDeferred(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  if (installed) return null;
+
+  async function install() {
+    if (isIOS) {
+      setShowIosHint(true);
+      return;
+    }
+    if (!deferred) {
+      setShowIosHint(true);
+      return;
+    }
+    deferred.prompt();
+    await deferred.userChoice;
+    setDeferred(null);
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <button
+        onClick={install}
+        className="press"
+        style={{
+          width: "100%",
+          padding: 14,
+          borderRadius: 14,
+          border: "none",
+          background: `linear-gradient(135deg, ${C.brand}, #0A5E5D)`,
+          color: "#fff",
+          fontWeight: 700,
+          fontSize: 15,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          boxShadow: "0 8px 24px rgba(14,124,123,.28)",
+        }}
+      >
+        <Download size={18} /> Instalar app no celular
+      </button>
+      {showIosHint && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "12px 14px",
+            borderRadius: 12,
+            background: C.brandSoft,
+            fontSize: 13,
+            color: C.text,
+            lineHeight: 1.5,
+          }}
+        >
+          No iPhone: toque no botão <strong>Compartilhar</strong> do Safari (o quadrado com seta
+          para cima) e escolha <strong>“Adicionar à Tela de Início”</strong>.
+        </div>
+      )}
+    </div>
   );
 }

@@ -1,0 +1,38 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10908F"/>
+      <stop offset="1" stop-color="#0A5E5D"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="180" y1="120" x2="332" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E6F2F2"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feOffset dy="4" in="b" result="o"/>
+      <feComponentTransfer in="o" result="s"><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode in="s"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- fundo arredondado -->
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+
+  <!-- brilho ambiente -->
+  <ellipse cx="180" cy="150" rx="220" ry="180" fill="#FFFFFF" opacity="0.06"/>
+
+  <!-- gota de saúde -->
+  <g filter="url(#soft)">
+    <path d="M256 120
+             C 256 120, 340 224, 340 296
+             C 340 343, 302 380, 256 380
+             C 210 380, 172 343, 172 296
+             C 172 224, 256 120, 256 120 Z"
+          fill="url(#drop)"/>
+  </g>
+
+  <!-- pulso de batimento dentro da gota -->
+  <path d="M196 300 H226 L242 262 L268 332 L286 296 H320"
+        stroke="#0E7C7B" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>
