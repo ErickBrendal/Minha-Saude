@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import { Plus, X, Stethoscope, Paperclip, Trash2, FileText } from "lucide-react";
+import { Plus, X, Stethoscope, Paperclip, Trash2, FileText, CalendarPlus } from "lucide-react";
 import { Card, Spinner, PrimaryButton } from "@/components/ui";
 import { C, fmtDate } from "@/lib/design";
 import { createClient } from "@/lib/supabase-browser";
 import { addAppointment, deleteAppointment, uploadAttachment } from "./actions";
+import { downloadICS } from "@/lib/calendar";
 
 type Appt = {
   id: string;
@@ -14,6 +15,8 @@ type Appt = {
   appointment_date: string;
   summary: string | null;
   diagnosis: string | null;
+  location: string | null;
+  notes: string | null;
   attachments: { id: string; file_name: string; file_path: string }[];
 };
 
@@ -222,26 +225,58 @@ function ApptCard({
           });
         }}
       />
-      <button
-        onClick={() => fileRef.current?.click()}
-        disabled={pending}
-        style={{
-          marginTop: 12,
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          padding: "8px 13px",
-          borderRadius: 10,
-          border: `1.5px solid ${C.divider}`,
-          background: C.surface,
-          cursor: "pointer",
-          fontSize: 13,
-          fontWeight: 600,
-          color: C.text2,
-        }}
-      >
-        <Paperclip size={15} /> Anexar receita ou exame
-      </button>
+      <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          onClick={() =>
+            downloadICS(
+              {
+                title: `${a.specialty || a.doctor_name || "Consulta"}${a.doctor_name && a.specialty ? " · " + a.doctor_name : ""}`,
+                start: new Date(a.appointment_date),
+                durationMinutes: 60,
+                location: a.location || null,
+                description: [a.summary, a.notes].filter(Boolean).join(" — ") || "Consulta médica (Minha Saúde)",
+                reminderMinutes: 120,
+              },
+              `consulta-${(a.specialty || "medica").toLowerCase().replace(/\s+/g, "-")}`
+            )
+          }
+          className="press"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 13px",
+            borderRadius: 10,
+            border: "none",
+            background: C.brand,
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 700,
+            color: "#fff",
+          }}
+        >
+          <CalendarPlus size={15} /> Adicionar ao calendário
+        </button>
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={pending}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "8px 13px",
+            borderRadius: 10,
+            border: `1.5px solid ${C.divider}`,
+            background: C.surface,
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 600,
+            color: C.text2,
+          }}
+        >
+          <Paperclip size={15} /> Anexar
+        </button>
+      </div>
     </Card>
   );
 }
