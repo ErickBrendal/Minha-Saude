@@ -5,10 +5,10 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, X, Trash2, Syringe, Pill, Check, Bell } from "lucide-react";
 import { Card, Chip, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, glucoseColor, glucoseLabel, fmtTime, mean, sd, gmi } from "@/lib/design";
-import { addGlucose, deleteMeasurement } from "../actions";
+import { addGlucose, deleteMeasurement, logMedication } from "../actions";
 
 type G = { id: string; value: number; context: any; measured_at: string };
 const TIMINGS = ["Jejum", "Pré-refeição", "Pós-refeição", "Antes de dormir"];
@@ -17,10 +17,14 @@ export default function GlicemiaClient({
   low,
   high,
   glucose,
+  medications,
+  medLogsToday,
 }: {
   low: number;
   high: number;
   glucose: G[];
+  medications: any[];
+  medLogsToday: any[];
 }) {
   const [sheet, setSheet] = useState(false);
   const [period, setPeriod] = useState(7);
@@ -83,6 +87,21 @@ export default function GlicemiaClient({
           <Plus size={17} strokeWidth={2.6} /> Registrar
         </button>
       </div>
+
+      {/* PAINEL DE ADESÃO À MEDICAÇÃO — evita esquecimento */}
+      {medications.length > 0 && (
+        <MedAdherencePanel
+          medications={medications}
+          medLogsToday={medLogsToday}
+          pending={pending}
+          onLog={(m) =>
+            start(async () => {
+              await logMedication(m.id, m.name, m.dose_amount, m.dose_unit, null);
+              flash(`${m.name} registrada ✓`);
+            })
+          }
+        />
+      )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
         {[7, 14, 30, 90].map((p) => (
@@ -418,5 +437,144 @@ function LogSheet({
         </PrimaryButton>
       </div>
     </div>
+  );
+}
+
+// ============================================================
+// Painel de adesão à medicação — controle anti-esquecimento
+// ============================================================
+function MedAdherencePanel({
+  medications,
+  medLogsToday,
+  pending,
+  onLog,
+}: {
+  medications: any[];
+  medLogsToday: any[];
+  pending: boolean;
+  onLog: (m: any) => void;
+}) {
+  // Conta quantas doses de cada medicação já foram tomadas hoje
+  const takenCount = (medId: string) =>
+    medLogsToday.filter((l) => l.medication_id === medId).length;
+
+  // Total de doses previstas hoje (soma dos horários de cada medicação)
+  const totalDoses = medications.reduce(
+    (s, m) => s + Math.max(1, (m.schedule_times || []).length),
+    0
+  );
+  const takenDoses = medications.reduce(
+    (s, m) => s + Math.min(takenCount(m.id), Math.max(1, (m.schedule_times || []).length)),
+    0
+  );
+  const allDone = totalDoses > 0 && takenDoses >= totalDoses;
+
+  return (
+    <Card
+      style={{
+        marginBottom: 14,
+        padding: 16,
+        background: allDone ? "#EAF8EF" : "#FFF9EC",
+        border: `1px solid ${allDone ? "#BFE9CD" : "#FBE4B0"}`,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 9,
+            background: allDone ? C.inRange : "#E8800A",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {allDone ? <Check size={17} color="#fff" strokeWidth={3} /> : <Bell size={16} color="#fff" />}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14.5 }}>
+            {allDone ? "Medicação do dia em dia!" : "Medicações de hoje"}
+          </div>
+          <div style={{ fontSize: 12, color: C.text2 }}>
+            {takenDoses} de {totalDoses} doses registradas
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {medications.map((m) => {
+          const times: string[] = m.schedule_times || [];
+          const taken = takenCount(m.id);
+          const needed = Math.max(1, times.length);
+          const done = taken >= needed;
+          const isInsulin = (m.dose_unit || "").toUpperCase() === "U" || m.kind === "insulina";
+          return (
+            <div
+              key={m.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                padding: "10px 12px",
+                borderRadius: 12,
+                background: C.surface,
+                opacity: done ? 0.7 : 1,
+              }}
+            >
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 9,
+                  background: (isInsulin ? C.insulin : C.brand) + "1A",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                {isInsulin ? <Syringe size={16} color={C.insulin} /> : <Pill size={16} color={C.brand} />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {m.name}
+                </div>
+                <div style={{ fontSize: 11.5, color: C.text2 }}>
+                  {m.dose_amount ? `${m.dose_amount}${m.dose_unit || ""}` : ""}
+                  {times.length > 0 ? ` · ${times.join(", ")}` : ""}
+                  {needed > 1 ? ` · ${taken}/${needed}` : ""}
+                </div>
+              </div>
+              {done ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 4, color: C.inRange, fontWeight: 700, fontSize: 13 }}>
+                  <Check size={16} strokeWidth={3} /> Ok
+                </div>
+              ) : (
+                <button
+                  onClick={() => onLog(m)}
+                  disabled={pending}
+                  className="press"
+                  style={{
+                    border: "none",
+                    background: isInsulin ? C.insulin : C.brand,
+                    color: "#fff",
+                    fontWeight: 700,
+                    fontSize: 13,
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Tomei
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
