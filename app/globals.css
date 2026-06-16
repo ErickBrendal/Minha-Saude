@@ -113,3 +113,5 @@ select {
 @media (prefers-reduced-motion: reduce) {
   .stagger > *, .press { animation: none !important; opacity: 1 !important; }
 }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }

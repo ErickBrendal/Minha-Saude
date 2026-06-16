@@ -205,6 +205,20 @@ export default function Dashboard({
           </Card>
         </Link>
 
+        {/* ASSISTENTE — chat de dúvidas */}
+        <Link href="/app/assistente" style={{ textDecoration: "none", color: "inherit" }}>
+          <Card className="press" style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: "#5856D61A", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <Sparkles size={19} color="#5856D6" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14.5 }}>Tire uma dúvida</div>
+              <div style={{ fontSize: 12.5, color: C.text2 }}>Pergunte sobre dieta, remédios, insulina…</div>
+            </div>
+            <ChevronRight size={18} color={C.text2} />
+          </Card>
+        </Link>
+
         {/* GLICEMIA (se diabetes ou tem registros) */}
         {(goal.kind === "diabetes" || glucose.length > 0) && (
           <Link href="/app/glicemia" style={{ textDecoration: "none", color: "inherit" }}>

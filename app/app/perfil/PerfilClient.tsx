@@ -3,7 +3,7 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Stethoscope, Pill, ShieldCheck, LogOut, ChevronRight, Download } from "lucide-react";
+import { Stethoscope, Pill, ShieldCheck, LogOut, ChevronRight, Download, FileText, FileBarChart } from "lucide-react";
 import { Card, Spinner } from "@/components/ui";
 import { C, NUM } from "@/lib/design";
 import { createClient } from "@/lib/supabase-browser";
@@ -74,6 +74,8 @@ export default function PerfilClient({
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
         <NavRow href="/app/consultas" icon={Stethoscope} label="Consultas e receitas" />
         <NavRow href="/app/medicacoes" icon={Pill} label="Medicações" />
+        <NavRow href="/app/documentos" icon={FileText} label="Central de documentos" />
+        <NavRow href="/app/relatorio" icon={FileBarChart} label="Relatório para o médico" />
       </div>
 
       {/* ALVOS */}

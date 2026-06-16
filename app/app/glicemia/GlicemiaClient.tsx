@@ -5,10 +5,11 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Plus, X, Trash2, Syringe, Pill, Check, Bell } from "lucide-react";
+import { Plus, X, Trash2, Syringe, Pill, Check, Bell, Lightbulb, AlertTriangle, ThumbsUp } from "lucide-react";
 import { Card, Chip, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, glucoseColor, glucoseLabel, fmtTime, mean, sd, gmi } from "@/lib/design";
 import { addGlucose, deleteMeasurement, logMedication } from "../actions";
+import { detectPatterns } from "@/lib/patterns";
 
 type G = { id: string; value: number; context: any; measured_at: string };
 const TIMINGS = ["Jejum", "Pré-refeição", "Pós-refeição", "Antes de dormir"];
@@ -64,6 +65,13 @@ export default function GlicemiaClient({
     [periodVals]
   );
 
+  // Detecção de padrões (usa os últimos 14 dias de registros)
+  const patterns = useMemo(() => {
+    const since = Date.now() - 14 * 864e5;
+    const recent = glucose.filter((g) => new Date(g.measured_at).getTime() >= since);
+    return detectPatterns(recent, low, high);
+  }, [glucose, low, high]);
+
   return (
     <div style={{ padding: "20px 18px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
@@ -101,6 +109,28 @@ export default function GlicemiaClient({
             })
           }
         />
+      )}
+
+      {/* PADRÕES DETECTADOS — insights acionáveis */}
+      {patterns.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+          {patterns.map((p, i) => {
+            const cfg =
+              p.level === "alerta"
+                ? { bg: "#FFF1F0", border: "#FFD6D2", color: C.critHigh, Icon: AlertTriangle }
+                : p.level === "atencao"
+                ? { bg: "#FFF9EC", border: "#FBE4B0", color: "#E8800A", Icon: Lightbulb }
+                : { bg: "#EAF8EF", border: "#BFE9CD", color: C.inRange, Icon: ThumbsUp };
+            return (
+              <Card key={i} style={{ padding: 13, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                  <cfg.Icon size={18} color={cfg.color} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <div style={{ fontSize: 13, lineHeight: 1.45, color: C.text }}>{p.text}</div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
