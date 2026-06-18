@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Home, Droplet, UtensilsCrossed, User, Plus,
-  Sparkles, Activity, FileText,
+  Sparkles, Activity, FileText, Gauge,
 } from "lucide-react";
 import { C } from "@/lib/design";
 
@@ -20,6 +20,7 @@ const TABS_RIGHT = [
 
 const QUICK_ACTIONS = [
   { href: "/app/assistente", label: "Perguntar ao assistente", icon: Sparkles, color: "#5856D6" },
+  { href: "/app/indicadores", label: "Meus indicadores", icon: Gauge, color: "#0E7C7B" },
   { href: "/app/glicemia", label: "Registrar glicemia", icon: Droplet, color: "#0E7C7B" },
   { href: "/app/alimentacao", label: "Foto da refeição", icon: UtensilsCrossed, color: "#FF9F0A" },
   { href: "/app/documentos", label: "Enviar documento", icon: FileText, color: "#34C759" },

@@ -37,19 +37,29 @@ export async function POST(req: NextRequest) {
       .eq("user_id", user.id).limit(20),
     supabase.from("appointments").select("specialty, doctor_name, appointment_date, location, notes, diagnosis, summary")
       .eq("user_id", user.id).order("appointment_date", { ascending: false }).limit(10),
-    supabase.from("measurements").select("value, measured_at, context")
-      .eq("user_id", user.id).eq("metric_type", "glucose")
-      .gte("measured_at", weekAgo.toISOString()).order("measured_at", { ascending: false }).limit(40),
+    supabase.from("measurements").select("value, measured_at, context, metric_type")
+      .eq("user_id", user.id)
+      .gte("measured_at", weekAgo.toISOString()).order("measured_at", { ascending: false }).limit(120),
     supabase.from("documents").select("title, category, summary, extracted")
       .eq("user_id", user.id).order("created_at", { ascending: false }).limit(15),
   ]);
 
   const profile = profileRes.data;
   const goal = goalConfig(profile?.primary_goal);
-  const gvals = (glucoseRes.data ?? []).map((g: any) => g.value);
+  const allMeasures = glucoseRes.data ?? [];
+  const byType = (t: string) => allMeasures.filter((m: any) => m.metric_type === t);
+  const gvals = byType("glucose").map((g: any) => g.value);
   const low = profile?.glucose_target_low ?? 70;
   const high = profile?.glucose_target_high ?? 180;
   const avgGlucose = gvals.length ? Math.round(gvals.reduce((s: number, v: number) => s + v, 0) / gvals.length) : null;
+
+  const pressRows = byType("pressure");
+  const avgSys = pressRows.length ? Math.round(pressRows.reduce((s: number, m: any) => s + m.value, 0) / pressRows.length) : null;
+  const avgDia = pressRows.length ? Math.round(pressRows.reduce((s: number, m: any) => s + (m.context?.diastolic || 0), 0) / pressRows.length) : null;
+  const cholRows = byType("cholesterol");
+  const lastChol = cholRows[0] ?? null;
+  const moodRows = byType("mood");
+  const avgMood = moodRows.length ? +(moodRows.reduce((s: number, m: any) => s + m.value, 0) / moodRows.length).toFixed(1) : null;
 
   // Monta um contexto enxuto e legível para o modelo
   const ctx = {
@@ -57,6 +67,11 @@ export async function POST(req: NextRequest) {
     objetivo: goal.label,
     alvo_glicemico: `${low}-${high} mg/dL`,
     glicemia_media_7d: avgGlucose,
+    pressao_media_7d: avgSys ? `${avgSys}/${avgDia} mmHg` : null,
+    meta_pressao: profile?.bp_systolic_target ? `${profile.bp_systolic_target}/${profile.bp_diastolic_target} mmHg` : null,
+    colesterol_ultimo: lastChol ? { total: lastChol.value, ldl: lastChol.context?.ldl, hdl: lastChol.context?.hdl, triglicerides: lastChol.context?.triglicerides } : null,
+    meta_ldl: profile?.ldl_target ?? null,
+    humor_medio_7d: avgMood,
     medicacoes: (medsRes.data ?? []).map((m: any) => ({
       nome: m.name,
       dose: m.dose_amount ? `${m.dose_amount}${m.dose_unit ?? ""}` : null,

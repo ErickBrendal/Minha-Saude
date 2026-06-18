@@ -5,10 +5,13 @@
 
 export type GoalKind =
   | "diabetes"
+  | "colesterol"
+  | "pressao"
+  | "coracao"
   | "emagrecer"
   | "dieta"
   | "ganho_massa"
-  | "pressao"
+  | "mente"
   | "geral";
 
 export interface GoalConfig {
@@ -19,7 +22,7 @@ export interface GoalConfig {
   color: string;
   colorSoft: string;
   // métricas que o dashboard prioriza para este objetivo
-  primaryMetrics: ("glucose" | "weight" | "calories" | "carbs" | "activity" | "adherence")[];
+  primaryMetrics: ("glucose" | "weight" | "calories" | "carbs" | "activity" | "adherence" | "cholesterol" | "pressure" | "mood")[];
   // diretrizes que a IA cita
   guidelines: string[];
   // foco do especialista virtual
@@ -82,10 +85,46 @@ export const GOALS: Record<GoalKind, GoalConfig> = {
     emoji: "❤️",
     color: "#FF3B30",
     colorSoft: "#FFEAE8",
-    primaryMetrics: ["weight", "activity", "adherence"],
+    primaryMetrics: ["pressure", "weight", "activity", "adherence"],
     guidelines: ["OMS", "SBC"],
     specialistFocus:
       "redução de sódio, atividade física regular, controle de peso e adesão à medicação anti-hipertensiva",
+  },
+  colesterol: {
+    kind: "colesterol",
+    label: "Controlar colesterol",
+    tagline: "LDL na meta, coração protegido",
+    emoji: "🫀",
+    color: "#E8800A",
+    colorSoft: "#FFF1E0",
+    primaryMetrics: ["cholesterol", "weight", "activity", "adherence"],
+    guidelines: ["SBC", "OMS"],
+    specialistFocus:
+      "redução de gorduras saturadas e trans, aumento de fibras, atividade física, controle de LDL/HDL/triglicerídeos e adesão à medicação (estatinas)",
+  },
+  coracao: {
+    kind: "coracao",
+    label: "Saúde do coração",
+    tagline: "Cuidar do coração por inteiro",
+    emoji: "💗",
+    color: "#FF2D78",
+    colorSoft: "#FFE6F0",
+    primaryMetrics: ["pressure", "cholesterol", "activity", "weight"],
+    guidelines: ["SBC", "OMS"],
+    specialistFocus:
+      "saúde cardiovascular integral: pressão, colesterol, peso, atividade aeróbica, controle de estresse e adesão às medicações cardiológicas",
+  },
+  mente: {
+    kind: "mente",
+    label: "Bem-estar mental",
+    tagline: "Humor, sono e equilíbrio",
+    emoji: "🧠",
+    color: "#5856D6",
+    colorSoft: "#ECECFB",
+    primaryMetrics: ["mood", "activity", "weight"],
+    guidelines: ["OMS"],
+    specialistFocus:
+      "regularidade de sono, atividade física, registro de humor, manejo de estresse e construção de rotina — sempre reforçando apoio profissional quando necessário",
   },
   geral: {
     kind: "geral",

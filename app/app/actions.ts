@@ -28,6 +28,97 @@ export async function deleteMeasurement(id: string) {
   const { error } = await supabase.from("measurements").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/app/glicemia");
+  revalidatePath("/app/indicadores");
+  revalidatePath("/app");
+}
+
+// Pressão arterial: value = sistólica, diastólica vai no context
+export async function addPressure(systolic: number, diastolic: number, note: string | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase.from("measurements").insert({
+    user_id: user.id,
+    metric_type: "pressure",
+    value: systolic,
+    unit: "mmHg",
+    context: { diastolic },
+    note,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/indicadores");
+  revalidatePath("/app");
+}
+
+// Colesterol: value = total, frações no context
+export async function addCholesterol(
+  total: number,
+  ldl: number | null,
+  hdl: number | null,
+  triglicerides: number | null,
+  note: string | null
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase.from("measurements").insert({
+    user_id: user.id,
+    metric_type: "cholesterol",
+    value: total,
+    unit: "mg/dL",
+    context: { ldl, hdl, triglicerides },
+    note,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/indicadores");
+  revalidatePath("/app");
+}
+
+// Humor: value = 1..5
+export async function addMood(level: number, note: string | null) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase.from("measurements").insert({
+    user_id: user.id,
+    metric_type: "mood",
+    value: level,
+    unit: "nivel",
+    note,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/indicadores");
+  revalidatePath("/app");
+}
+
+// Metas de pressão e colesterol
+export async function updateHealthTargets(opts: {
+  bp_systolic_target?: number | null;
+  bp_diastolic_target?: number | null;
+  ldl_target?: number | null;
+  total_chol_target?: number | null;
+}) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase
+    .from("health_profiles")
+    .update({ ...opts, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/indicadores");
   revalidatePath("/app");
 }
 
