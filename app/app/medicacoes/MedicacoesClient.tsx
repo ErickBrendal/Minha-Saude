@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Plus, X, Syringe, Pill, Check } from "lucide-react";
+import { Plus, X, Syringe, Pill, Check, Pencil, Trash2 } from "lucide-react";
 import { Card, Chip, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, fmtTime } from "@/lib/design";
-import { addMedication, logMedication } from "../actions";
+import { addMedication, updateMedication, deleteMedication, logMedication } from "../actions";
 
 type Med = {
   id: string;
@@ -37,6 +37,8 @@ export default function MedicacoesClient({
   logs: Log[];
 }) {
   const [addOpen, setAddOpen] = useState(false);
+  const [editMed, setEditMed] = useState<Med | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Med | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -134,6 +136,20 @@ export default function MedicacoesClient({
                   <Check size={15} /> Registrar
                 </button>
               </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.divider}` }}>
+                <button
+                  onClick={() => setEditMed(m)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 9, border: `1.5px solid ${C.divider}`, background: C.surface, cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.text2 }}
+                >
+                  <Pencil size={14} /> Editar
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(m)}
+                  style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 9, border: `1.5px solid ${C.divider}`, background: C.surface, cursor: "pointer", fontSize: 13, fontWeight: 600, color: C.hypo }}
+                >
+                  <Trash2 size={14} /> Excluir
+                </button>
+              </div>
             </Card>
           );
         })}
@@ -182,6 +198,56 @@ export default function MedicacoesClient({
         />
       )}
 
+      {editMed && (
+        <AddMedSheet
+          pending={pending}
+          initial={editMed}
+          onClose={() => setEditMed(null)}
+          onSave={(name, kind, dose, unit, times) =>
+            start(async () => {
+              await updateMedication(editMed.id, name, kind, dose, unit, times);
+              setEditMed(null);
+              flash("Medicação atualizada ✓");
+            })
+          }
+        />
+      )}
+
+      {confirmDelete && (
+        <div
+          onClick={() => setConfirmDelete(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.4)", zIndex: 70, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+        >
+          <div onClick={(e) => e.stopPropagation()} style={{ background: C.surface, borderRadius: 20, padding: 22, width: "100%", maxWidth: 340, animation: "scaleIn 0.25s ease-out" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 8px" }}>Excluir medicação?</h2>
+            <p style={{ fontSize: 14, color: C.text2, lineHeight: 1.5, margin: "0 0 18px" }}>
+              {confirmDelete.name} deixará de aparecer na sua lista e no painel de doses. O histórico de doses já registradas é mantido.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmDelete(null)}
+                style={{ flex: 1, padding: 12, borderRadius: 12, border: `1.5px solid ${C.divider}`, background: C.surface, fontWeight: 700, fontSize: 14.5, cursor: "pointer", color: C.text2 }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() =>
+                  start(async () => {
+                    await deleteMedication(confirmDelete.id);
+                    setConfirmDelete(null);
+                    flash("Medicação excluída");
+                  })
+                }
+                disabled={pending}
+                style={{ flex: 1, padding: 12, borderRadius: 12, border: "none", background: C.hypo, color: "#fff", fontWeight: 700, fontSize: 14.5, cursor: "pointer" }}
+              >
+                {pending ? <Spinner /> : "Excluir"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {toast && (
         <div
           style={{
@@ -212,15 +278,20 @@ function AddMedSheet({
   pending,
   onClose,
   onSave,
+  initial,
 }: {
   pending: boolean;
   onClose: () => void;
   onSave: (name: string, kind: string, dose: number | null, unit: string, times: string[]) => void;
+  initial?: Med;
 }) {
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState(KINDS[0]);
-  const [dose, setDose] = useState("");
-  const [times, setTimes] = useState("");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [kind, setKind] = useState(
+    KINDS.find((k) => k.key === initial?.kind) ?? KINDS[0]
+  );
+  const [dose, setDose] = useState(initial?.dose_amount?.toString() ?? "");
+  const [times, setTimes] = useState((initial?.schedule_times ?? []).join(", "));
+  const isEdit = !!initial;
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -260,7 +331,7 @@ function AddMedSheet({
       >
         <div style={{ width: 38, height: 4.5, borderRadius: 99, background: C.divider, margin: "0 auto 14px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>Nova medicação</h2>
+          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>{isEdit ? "Editar medicação" : "Nova medicação"}</h2>
           <button
             onClick={onClose}
             style={{
@@ -327,7 +398,7 @@ function AddMedSheet({
               )
             }
           >
-            {pending ? <Spinner /> : "Cadastrar"}
+            {pending ? <Spinner /> : isEdit ? "Salvar alterações" : "Cadastrar"}
           </PrimaryButton>
         </div>
       </div>

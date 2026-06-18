@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition } from "react";
 import { Camera, Trash2, Sparkles, Loader2, UtensilsCrossed, BookOpen, Scale } from "lucide-react";
 import { Card, Chip, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, fmtTime } from "@/lib/design";
 import { saveMeal, deleteMeal } from "./actions";
 import BibliotecaTab from "./BibliotecaTab";
 import PesoTab from "./PesoTab";
+import { usePhotoPicker } from "@/components/PhotoPicker";
 
 const MEAL_TYPES = ["Café", "Almoço", "Jantar", "Lanche"];
 
@@ -85,7 +86,7 @@ function DiarioTab({ meals, profile, flash }: { meals: any[]; profile: any; flas
   const [mealType, setMealType] = useState("Almoço");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const picker = usePhotoPicker((f) => handlePhoto(f));
 
   const calTarget = profile?.daily_calorie_target;
   const carbTarget = profile?.daily_carb_target;
@@ -146,10 +147,8 @@ function DiarioTab({ meals, profile, flash }: { meals: any[]; profile: any; flas
         </div>
       )}
 
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])} />
-
       {!analysis && !analyzing && (
-        <Card onClick={() => fileRef.current?.click()} className="press" style={{ marginBottom: 18, padding: 28, textAlign: "center", cursor: "pointer", border: `2px dashed ${C.food}66`, background: "#FFF8F0" }}>
+        <Card onClick={() => picker.open()} className="press" style={{ marginBottom: 18, padding: 28, textAlign: "center", cursor: "pointer", border: `2px dashed ${C.food}66`, background: "#FFF8F0" }}>
           <div style={{ width: 56, height: 56, borderRadius: 18, background: C.food, margin: "0 auto 12px", display: "flex", alignItems: "center", justifyContent: "center", animation: "pulseGlow 2.5s ease-in-out infinite" }}>
             <Camera size={26} color="#fff" />
           </div>
@@ -171,7 +170,7 @@ function DiarioTab({ meals, profile, flash }: { meals: any[]; profile: any; flas
       {error && (
         <Card style={{ marginBottom: 18, padding: 16, background: "#FFF1F0", border: "1px solid #FFD6D2" }}>
           <div style={{ fontSize: 13.5, color: C.critHigh, lineHeight: 1.5 }}>{error}</div>
-          <button onClick={() => { setError(null); fileRef.current?.click(); }} style={{ marginTop: 10, border: "none", background: "transparent", color: C.brand, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+          <button onClick={() => { setError(null); picker.open(); }} style={{ marginTop: 10, border: "none", background: "transparent", color: C.brand, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
             Tentar de novo
           </button>
         </Card>
@@ -237,6 +236,7 @@ function DiarioTab({ meals, profile, flash }: { meals: any[]; profile: any; flas
           </Card>
         ))}
       </div>
+      {picker.sheet}
     </div>
   );
 }

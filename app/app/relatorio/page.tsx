@@ -10,7 +10,7 @@ export default async function RelatorioPage() {
   } = await supabase.auth.getUser();
 
   const since = new Date();
-  since.setDate(since.getDate() - 30);
+  since.setDate(since.getDate() - 180);
   const iso = since.toISOString();
 
   const [profileRes, glucoseRes, medsRes, medLogsRes, weightRes, actsRes] = await Promise.all([

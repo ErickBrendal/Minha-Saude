@@ -83,6 +83,50 @@ export async function addMedication(
   revalidatePath("/app/medicacoes");
 }
 
+export async function updateMedication(
+  id: string,
+  name: string,
+  kind: string,
+  dose: number | null,
+  unit: string | null,
+  times: string[]
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase
+    .from("medications")
+    .update({ name, kind, dose_amount: dose, dose_unit: unit, schedule_times: times })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/medicacoes");
+  revalidatePath("/app/glicemia");
+  revalidatePath("/app");
+}
+
+export async function deleteMedication(id: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  // Desativa em vez de apagar, preservando o histórico de doses já registradas
+  const { error } = await supabase
+    .from("medications")
+    .update({ active: false })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/medicacoes");
+  revalidatePath("/app/glicemia");
+  revalidatePath("/app");
+}
+
 export async function updateTargets(low: number, high: number) {
   const supabase = await createClient();
   const {

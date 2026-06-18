@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useMemo } from "react";
+import { useState, useTransition, useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
@@ -8,6 +8,7 @@ import { Scale, Camera, Plus, X, TrendingDown, TrendingUp, Loader2 } from "lucid
 import { Card, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, fmtDate } from "@/lib/design";
 import { addWeight } from "../actions";
+import { usePhotoPicker } from "@/components/PhotoPicker";
 
 export default function PesoTab({
   weightLogs,
@@ -23,7 +24,7 @@ export default function PesoTab({
   const [aiResult, setAiResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const picker = usePhotoPicker((f) => handlePhoto(f));
 
   const target = profile?.target_weight_kg;
   const current = weightLogs[0]?.weight_kg ?? profile?.weight_kg;
@@ -126,14 +127,6 @@ export default function PesoTab({
       )}
 
       {/* Botões de registro */}
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        style={{ display: "none" }}
-        onChange={(e) => e.target.files?.[0] && handlePhoto(e.target.files[0])}
-      />
       <div style={{ display: "flex", gap: 11, marginBottom: 18 }}>
         <button
           onClick={() => setSheet(true)}
@@ -143,7 +136,7 @@ export default function PesoTab({
           <Plus size={18} /> Digitar peso
         </button>
         <button
-          onClick={() => fileRef.current?.click()}
+          onClick={() => picker.open()}
           className="press"
           style={{ flex: 1, padding: 14, borderRadius: 14, border: `1.5px solid ${C.brand}`, background: C.surface, color: C.brand, fontWeight: 700, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}
         >
@@ -219,6 +212,7 @@ export default function PesoTab({
       )}
 
       {sheet && <ManualSheet pending={pending} onClose={() => setSheet(false)} onSave={(v) => start(async () => { await addWeight(v, "manual"); setSheet(false); flash("Peso registrado ✓"); })} />}
+      {picker.sheet}
     </div>
   );
 }
