@@ -5,10 +5,10 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { Plus, X, Trash2, Syringe, Pill, Check, Bell, Lightbulb, AlertTriangle, ThumbsUp } from "lucide-react";
+import { Plus, X, Trash2, Syringe, Pill, Check, Bell, Lightbulb, AlertTriangle, ThumbsUp, Pencil } from "lucide-react";
 import { Card, Chip, Spinner, PrimaryButton } from "@/components/ui";
 import { C, NUM, glucoseColor, glucoseLabel, fmtTime, mean, sd, gmi } from "@/lib/design";
-import { addGlucose, deleteMeasurement, logMedication } from "../actions";
+import { addGlucose, updateGlucose, deleteMeasurement, logMedication } from "../actions";
 import { detectPatterns } from "@/lib/patterns";
 
 type G = { id: string; value: number; context: any; measured_at: string };
@@ -28,6 +28,7 @@ export default function GlicemiaClient({
   medLogsToday: any[];
 }) {
   const [sheet, setSheet] = useState(false);
+  const [editing, setEditing] = useState<G | null>(null);
   const [period, setPeriod] = useState(7);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -236,20 +237,26 @@ export default function GlicemiaClient({
                 flexShrink: 0,
               }}
             />
-            <div style={{ flex: 1 }}>
-              <span style={{ fontSize: 19, fontWeight: 800, color: glucoseColor(g.value, low, high), ...NUM }}>
-                {g.value}
-              </span>
-              <span style={{ fontSize: 12.5, color: C.text2, fontWeight: 600 }}>
-                {" "}
-                mg/dL
-                {g.context?.timing ? ` · ${g.context.timing}` : ""}
-              </span>
-            </div>
-            <div style={{ textAlign: "right", fontSize: 12, color: C.text2, ...NUM }}>
-              {new Date(g.measured_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-              <br />
-              {fmtTime(new Date(g.measured_at))}
+            <div
+              onClick={() => setEditing(g)}
+              style={{ flex: 1, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}
+            >
+              <div style={{ flex: 1 }}>
+                <span style={{ fontSize: 19, fontWeight: 800, color: glucoseColor(g.value, low, high), ...NUM }}>
+                  {g.value}
+                </span>
+                <span style={{ fontSize: 12.5, color: C.text2, fontWeight: 600 }}>
+                  {" "}
+                  mg/dL
+                  {g.context?.timing ? ` · ${g.context.timing}` : ""}
+                </span>
+              </div>
+              <div style={{ textAlign: "right", fontSize: 12, color: C.text2, ...NUM }}>
+                {new Date(g.measured_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+                <br />
+                {fmtTime(new Date(g.measured_at))}
+              </div>
+              <Pencil size={14} color="#C4C4C8" />
             </div>
             <button
               onClick={() =>
@@ -272,11 +279,28 @@ export default function GlicemiaClient({
           high={high}
           pending={pending}
           onClose={() => setSheet(false)}
-          onSave={(value, timing) =>
+          onSave={(value, timing, measuredAt) =>
             start(async () => {
-              await addGlucose(value, timing, null);
+              await addGlucose(value, timing, null, measuredAt);
               setSheet(false);
               flash("Glicemia registrada ✓");
+            })
+          }
+        />
+      )}
+
+      {editing && (
+        <LogSheet
+          low={low}
+          high={high}
+          pending={pending}
+          initial={editing}
+          onClose={() => setEditing(null)}
+          onSave={(value, timing, measuredAt) =>
+            start(async () => {
+              await updateGlucose(editing.id, value, timing, measuredAt!, null);
+              setEditing(null);
+              flash("Registro atualizado ✓");
             })
           }
         />
@@ -345,15 +369,20 @@ function LogSheet({
   pending,
   onClose,
   onSave,
+  initial,
 }: {
   low: number;
   high: number;
   pending: boolean;
   onClose: () => void;
-  onSave: (value: number, timing: string | null) => void;
+  onSave: (value: number, timing: string | null, measuredAt: string) => void;
+  initial?: G;
 }) {
-  const [val, setVal] = useState("");
-  const [timing, setTiming] = useState<string | null>(null);
+  const isEdit = !!initial;
+  const [val, setVal] = useState(initial ? String(initial.value) : "");
+  const [timing, setTiming] = useState<string | null>(initial?.context?.timing ?? null);
+  // data/hora local no formato aceito pelo input datetime-local
+  const [when, setWhen] = useState(() => toLocalInput(initial ? new Date(initial.measured_at) : new Date()));
 
   function press(k: string) {
     if (k === "⌫") return setVal(val.slice(0, -1));
@@ -361,6 +390,10 @@ function LogSheet({
     setVal(val + k);
   }
   const ok = val && +val > 0;
+
+  // checa se a data escolhida não é "hoje agora" (registro retroativo)
+  const chosen = fromLocalInput(when);
+  const isToday = new Date().toDateString() === chosen.toDateString();
 
   return (
     <div
@@ -383,13 +416,17 @@ function LogSheet({
           maxWidth: 480,
           borderRadius: "24px 24px 0 0",
           padding: "12px 20px 28px",
+          maxHeight: "92vh",
+          overflowY: "auto",
           boxShadow: "0 -8px 40px rgba(0,0,0,.18)",
           animation: "slideUp 280ms ease-out",
         }}
       >
         <div style={{ width: 38, height: 4.5, borderRadius: 99, background: C.divider, margin: "0 auto 14px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>Registrar glicemia</h2>
+          <h2 style={{ fontSize: 19, fontWeight: 800, margin: 0 }}>
+            {isEdit ? "Editar registro" : "Registrar glicemia"}
+          </h2>
           <button
             onClick={onClose}
             style={{
@@ -436,6 +473,50 @@ function LogSheet({
           ))}
         </div>
 
+        {/* Data e hora — permite registro retroativo */}
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: C.text2 }}>Data e hora</span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                onClick={() => setWhen(toLocalInput(new Date()))}
+                style={quickDateBtn(isToday)}
+              >
+                Agora
+              </button>
+              <button
+                onClick={() => setWhen(toLocalInput(new Date(Date.now() - 864e5)))}
+                style={quickDateBtn(false)}
+              >
+                Ontem
+              </button>
+            </div>
+          </div>
+          <input
+            type="datetime-local"
+            value={when}
+            max={toLocalInput(new Date())}
+            onChange={(e) => setWhen(e.target.value)}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              fontSize: 16,
+              padding: "11px 13px",
+              borderRadius: 12,
+              border: `1.5px solid ${isToday ? C.divider : C.brand}`,
+              outline: "none",
+              background: C.bg,
+              fontFamily: "inherit",
+              color: C.text,
+            }}
+          />
+          {!isToday && (
+            <div style={{ fontSize: 12, color: C.brand, fontWeight: 600, marginTop: 6 }}>
+              Registro retroativo — {chosen.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}
+            </div>
+          )}
+        </div>
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"].map((k, i) =>
             k === "" ? (
@@ -462,12 +543,34 @@ function LogSheet({
           )}
         </div>
 
-        <PrimaryButton disabled={!ok || pending} onClick={() => ok && onSave(+val, timing)}>
-          {pending ? <Spinner /> : "Salvar"}
+        <PrimaryButton disabled={!ok || pending} onClick={() => ok && onSave(+val, timing, chosen.toISOString())}>
+          {pending ? <Spinner /> : isEdit ? "Salvar alterações" : "Salvar"}
         </PrimaryButton>
       </div>
     </div>
   );
+}
+
+// Date -> "YYYY-MM-DDTHH:mm" no fuso local (para datetime-local)
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// "YYYY-MM-DDTHH:mm" local -> Date
+function fromLocalInput(s: string): Date {
+  return s ? new Date(s) : new Date();
+}
+function quickDateBtn(active: boolean): React.CSSProperties {
+  return {
+    padding: "5px 11px",
+    borderRadius: 99,
+    border: "none",
+    background: active ? C.brand : "#F0F0F2",
+    color: active ? "#fff" : C.text2,
+    fontSize: 12.5,
+    fontWeight: 700,
+    cursor: "pointer",
+  };
 }
 
 // ============================================================

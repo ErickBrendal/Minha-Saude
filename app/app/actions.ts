@@ -3,23 +3,62 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 
-export async function addGlucose(value: number, timing: string | null, note: string | null) {
+export async function addGlucose(
+  value: number,
+  timing: string | null,
+  note: string | null,
+  measuredAt?: string | null
+) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Não autenticado");
 
-  const { error } = await supabase.from("measurements").insert({
+  const row: any = {
     user_id: user.id,
     metric_type: "glucose",
     value,
     unit: "mg/dL",
     context: timing ? { timing } : {},
     note,
-  });
+  };
+  // Se o usuário informou uma data/hora (ex.: registro retroativo), usa ela.
+  if (measuredAt) row.measured_at = measuredAt;
+
+  const { error } = await supabase.from("measurements").insert(row);
   if (error) throw new Error(error.message);
   revalidatePath("/app/glicemia");
+  revalidatePath("/app/indicadores");
+  revalidatePath("/app");
+}
+
+export async function updateGlucose(
+  id: string,
+  value: number,
+  timing: string | null,
+  measuredAt: string,
+  note: string | null
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Não autenticado");
+
+  const { error } = await supabase
+    .from("measurements")
+    .update({
+      value,
+      context: timing ? { timing } : {},
+      measured_at: measuredAt,
+      note,
+    })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/app/glicemia");
+  revalidatePath("/app/indicadores");
   revalidatePath("/app");
 }
 
